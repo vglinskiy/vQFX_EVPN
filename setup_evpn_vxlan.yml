@@ -1,0 +1,37 @@
+# This task gets all Junos configuration from all devices
+- name: Build and deploy configuration
+  hosts: all
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Creating basic configuration
+      tags:
+        - create
+      template: src=common.conf.j2 dest=/tmp/{{ inventory_hostname }}.conf
+
+    - name: Applying basic config to device
+      tags:
+        - apply
+      junos_config:
+        provider: "{{ junos_ssh }}"
+        src: "/tmp/{{ inventory_hostname }}.conf"
+        src_format: text
+        update: override
+        comment: basic configuration
+        
+    - name: Building vxlan evpn configuration
+      tags:
+        - create
+      template: src=evpn_bgp.conf.j2 dest=/tmp/{{ inventory_hostname }}-evpn.conf
+      when: "'spine' not in inventory_hostname"
+      
+    - name: Applying vxlan evpn config to device
+      tags:
+        - apply
+      junos_config:
+        provider: "{{ junos_ssh }}"
+        src: "/tmp/{{ inventory_hostname }}-evpn.conf"
+        src_format: text
+        update: merge
+        comment: evpn configuration
+      when: "'spine' not in inventory_hostname"

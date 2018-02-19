@@ -1,0 +1,10 @@
+my_bgp_asn: 64100.1000
+my_ospf_area: 0.0.0.0
+router_id: 10.99.99.254
+interfaces:
+    - name: lo0
+      ip: 10.99.99.254/32
+    - name: xe-0/0/0
+      ip: 172.30.0.1/31
+    - name: xe-0/0/1
+      ip: 172.30.0.3/31

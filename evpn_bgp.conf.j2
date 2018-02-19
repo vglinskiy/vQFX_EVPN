@@ -1,0 +1,93 @@
+protocols {
+    bgp {
+        group lab_evpn {
+            type internal;
+            local-address {{ router_id }};
+            family evpn {
+                signaling;
+            }
+            {% for peer in bgp_peers %}
+                neighbor {{ peer.ip }} description {{ peer.name }};
+            {% endfor %}
+        }
+    }
+    evpn {
+        encapsulation vxlan;
+        extended-vni-list all;
+        multicast-mode ingress-replication;
+        default-gateway do-not-advertise;
+        vni-options {
+        {% for vlan in vxlan_vlans %}
+            vni {{ vlan.vni }} {
+                vrf-target export {{ vlan.target_export }};
+            }
+        {% endfor %}
+        }
+    }
+}
+policy-options {
+    policy-statement vrf_import {
+    {% for vlan in vxlan_vlans %}
+        term {{ vlan.vlan_name }} {
+            from community {{ vlan.vlan_name }};
+            then accept;
+        }
+    {% endfor %}
+        term reject {
+            then reject;
+        }
+    }
+    {% for vlan in vxlan_vlans %}
+    community {{ vlan.vlan_name }} members {{ vlan.target_export }};
+    {% endfor %}
+}
+switch-options {
+    vtep-source-interface lo0.0;
+    route-distinguisher {{ router_id }}:1;
+    vrf-import vrf_import;
+    vrf-target {
+        target:64100:800;
+        auto;
+    }
+}
+vlans {
+    {% for vlan in vxlan_vlans %}
+    {{ vlan.vlan_name }} {
+        vlan-id {{vlan.vlan_id }};
+        l3-interface irb.{{ vlan.vlan_id }};
+        vxlan {
+            vni {{ vlan.vni }};
+            ingress-node-replication;
+        }
+    }
+    {% endfor %}
+}
+
+interfaces {
+{% for vlan in vxlan_vlans %}
+    {% if vlan.access_intf is defined %}
+    {% for intf in vlan.access_intf %}
+    {{ intf }} {
+        unit 0 {
+            family ethernet-switching {
+                interface-mode access;
+                vlan {
+                    members {{ vlan.vlan_id }};
+                }
+            }
+        }
+    }
+    {% endfor %}
+    {% endif %}
+    irb {
+        unit {{ vlan.vlan_id }} {
+            family inet {
+                address {{ vlan.irb.ip }} {
+                    virtual-gateway-address {{ vlan.irb.vip }};
+                }
+            }
+        }
+    }
+{% endfor %}
+}
+

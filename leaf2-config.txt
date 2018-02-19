@@ -1,0 +1,208 @@
+## Last changed: 2018-02-07 21:44:29 UTC
+version 15.1X53-D63.9;
+system {
+    host-name leaf2;
+    root-authentication {
+        encrypted-password "$1$fv3Ke4LT$10nlsy3SEJy5ainm.kPTd."; ## SECRET-DATA
+        ssh-rsa "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key"; ## SECRET-DATA
+    }
+    login {
+        user vagrant {
+            uid 2000;
+            class super-user;
+            authentication {
+                ssh-rsa "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key"; ## SECRET-DATA
+            }
+        }
+    }
+    services {
+        ssh {
+            root-login allow;
+        }
+        netconf {
+            ssh;
+        }
+    }
+    syslog {
+        user * {
+            any emergency;
+        }
+        file messages {
+            any notice;
+            authorization info;
+        }
+        file interactive-commands {
+            interactive-commands any;
+        }
+    }
+    extensions {
+        providers {
+            juniper {
+                license-type juniper deployment-scope commercial;
+            }
+            chef {
+                license-type juniper deployment-scope commercial;
+            }
+        }
+    }
+}
+interfaces {
+    xe-0/0/0 {
+        mtu 9216;
+        unit 0 {
+            family inet {
+                mtu 9000;
+                address 172.30.0.4/31;
+            }
+        }
+    }
+    xe-0/0/1 {
+        unit 0 {
+            family ethernet-switching {
+                interface-mode access;
+                vlan {
+                    members 811;
+                }
+            }
+        }
+    }
+    xe-0/0/2 {
+        unit 0 {
+            family ethernet-switching {
+                interface-mode access;
+                vlan {
+                    members 822;
+                }
+            }
+        }
+    }
+    em0 {
+        unit 0 {
+            family inet {
+                dhcp;
+            }
+        }
+    }
+    em1 {
+        unit 0 {
+            family inet {
+                address 169.254.0.2/24;
+            }
+        }
+    }
+    irb {
+        unit 811 {
+            family inet {
+                address 192.168.11.4/24 {
+                    virtual-gateway-address 192.168.11.1;
+                }
+            }
+        }
+        unit 822 {
+            family inet {
+                address 192.168.22.2/24 {
+                    virtual-gateway-address 192.168.22.1;
+                }
+            }
+        }
+    }
+    lo0 {
+        unit 0 {
+            family inet {
+                address 10.99.99.2/32;
+            }
+        }
+    }
+}
+routing-options {
+    router-id 10.99.99.2;
+    autonomous-system 64100.1 asdot-notation;
+}
+protocols {
+    bgp {
+        group myevpn {
+            type internal;
+            local-address 10.99.99.2;
+            family evpn {
+                signaling;
+            }
+            neighbor 10.99.99.3;
+            neighbor 10.99.99.4;
+        }
+    }
+    ospf {
+        area 0.0.0.0 {
+            interface lo0.0 {
+                interface-type p2p;
+                passive;
+            }
+            interface xe-0/0/0.0 {
+                interface-type p2p;
+            }
+        }
+    }
+    evpn {
+        encapsulation vxlan;
+        extended-vni-list all;
+        multicast-mode ingress-replication;
+        default-gateway do-not-advertise;
+        vni-options {
+            vni 99811 {
+                vrf-target export target:99:811;
+            }
+            vni 99822 {
+                vrf-target export target:99:822;
+            }
+        }
+    }
+    lldp {
+        interface all;
+    }
+}
+policy-options {
+    policy-statement vrf_import {
+        term vlan811 {
+            from community vlan811;
+            then accept;
+        }
+        term vlan822 {
+            from community vlan822;
+            then accept;
+        }
+        term reject {
+            then reject;
+        }
+    }
+    community vlan811 members target:99:811;
+    community vlan822 members target:99:822;
+}
+switch-options {
+    vtep-source-interface lo0.0;
+    route-distinguisher 10.99.99.2:1;
+    vrf-import vrf_import;
+    vrf-target {
+        target:64100:800;
+        auto;
+    }
+}
+vlans {
+    default {
+        vlan-id 1;
+    }
+    vlan811 {
+        vlan-id 811;
+        l3-interface irb.811;
+        vxlan {
+            vni 99811;
+            ingress-node-replication;
+        }
+    }
+    vlan822 {
+        vlan-id 822;
+        l3-interface irb.822;
+        vxlan {
+            vni 99822;
+            ingress-node-replication;
+        }
+    }
+}

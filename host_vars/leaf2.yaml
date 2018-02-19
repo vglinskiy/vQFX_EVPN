@@ -1,0 +1,31 @@
+my_bgp_asn: 64100.1000
+my_ospf_area: 0.0.0.0
+router_id: 10.99.99.2
+interfaces:
+    - name: lo0
+      ip: 10.99.99.2/32
+    - name: xe-0/0/0
+      ip: 172.30.0.2/31
+bgp_peers:
+    - name: leaf1
+      ip: 10.99.99.1
+vxlan_vlans:
+    - vlan_id: 811
+      vni: 99811
+      vlan_name: vlan811
+      target_export: "target:99:811"
+      irb:
+         ip: 192.168.11.2/24
+         vip: 192.168.11.1
+      access_intf:
+         - xe-0/0/1
+    - vlan_id: 822
+      vlan_name: vlan822
+      vni: 99822
+      target_export: "target:99:822"
+      irb:
+         ip: 192.168.22.2/24
+         vip: 192.168.22.1
+      access_intf:
+         - xe-0/0/2
+

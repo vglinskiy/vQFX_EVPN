@@ -1,0 +1,5 @@
+junos_ssh:
+  username: vagrant
+  transport: cli
+  host: "{{ ansible_host }}"
+  port: "{{ ansible_port }}"
